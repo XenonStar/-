@@ -1,14 +1,1 @@
-script.key = "0551114688"
-local userkey = "VL_KevinSVC"
-local userid = "420675868"
-local blacklist = ""
-loca key = game:HttGet(userkey,userid, true)
-local banned = game:HttpGet(blacklist, true)
-plr = game.Players.LocalPlayer
 
-if string.find(key,script.key) then
-loadstring(game:HttpGet("https://raw.githubusercontent.com/XenonStar/-/main/-")()
-print("WL"
-else
-plr:Kick("INBOX dysiz TO BUY")
-end
