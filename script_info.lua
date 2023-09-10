@@ -1,10 +1,10 @@
 local info = {
-  discord = "https://discord.gg/";
+  discord = "https://discord.gg/wXjYXGx3Sf";
   status = "enabled";
   announcement = "";
   support_discord = {
-    strucid = "";
-    da_hood = "";
+    strucid = "Lego Service";
+    da_hood = "dysiz";
   }
 }
 return info
