@@ -5,67 +5,114 @@ getgenv().hwid == "b03e5bd0-f853-4d6e-9811-41c3c0c62612"
 then
 print("Success LOADED")
 
+if getgenv().executed then return end
 
-local Debug = false -- Set this to true if you want my debug output.
+local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
 
-local Player = Players.LocalPlayer or Players.PlayerAdded:Wait()
-local Remotes = ReplicatedStorage:WaitForChild("Remotes", 9e9) -- A second argument in waitforchild what could it mean?
-local Balls = workspace:WaitForChild("Balls", 9e9)
+local LocalPlayer = game:GetService("Players").LocalPlayer
+local Balls = game:GetService("Workspace").Balls
 
--- Functions
+local IsTargeted = false
+local CanHit = false
 
-local function print(...) -- Debug print.
-    if Debug then
-        warn(...)
+function FindBall()
+    local RealBall
+
+    for i, v in pairs(Balls:GetChildren()) do
+        if v:GetAttribute("realBall") == true then
+            RealBall = v
+        end
     end
+    return RealBall
 end
-
-local function VerifyBall(Ball) -- Returns nil if the ball isn't a valid projectile; true if it's the right ball.
-    if typeof(Ball) == "Instance" and Ball:IsA("BasePart") and Ball:IsDescendantOf(Balls) and Ball:GetAttribute("realBall") == true then
+  
+function IsTarget()
+    local Ball = FindBall()
+    
+	
+    if Ball and Ball:GetAttribute("target") == LocalPlayer.Name then
         return true
     end
+    return false
 end
 
-local function IsTarget() -- Returns true if we are the current target.
-    return (Player.Character and Player.Character:FindFirstChild("Highlight"))
-end
-
-local function Parry() -- Parries.
-    Remotes:WaitForChild("ParryButtonPress"):Fire()
-end
-
--- The actual code
-
-Balls.ChildAdded:Connect(function(Ball)
-    if not VerifyBall(Ball) then
-        return
+function DetectBall()
+    local Ball = FindBall()
+    
+  	if Ball then
+        local BallVelocity = Ball.Velocity.Magnitude
+        local BallPosition = Ball.Position
+  
+        local PlayerPosition = LocalPlayer.Character.HumanoidRootPart.Position
+  
+        local Distance = (BallPosition - PlayerPosition).Magnitude
+        local PingAccountability = BallVelocity * (game.Stats.Network.ServerStatsItem["Data Ping"]:GetValue() / 1000)
+  
+        Distance -= PingAccountability
+        Distance -= shared.config.adjustment
+  
+        local Hit = Distance / BallVelocity
+  
+        if Hit <= shared.config.hit_range then
+            return true
+        end
     end
-    
-    print(`Ball Spawned: {Ball}`)
-    
-    local OldPosition = Ball.Position
-    local OldTick = tick()
-    
-    Ball:GetPropertyChangedSignal("Position"):Connect(function()
-        if IsTarget() then -- No need to do the math if we're not being attacked.
-            local Distance = (Ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
-            local Velocity = (OldPosition - Ball.Position).Magnitude -- Fix for .Velocity not working. Yes I got the lowest possible grade in accuplacer math.
-            
-            print(`Distance: {Distance}\nVelocity: {Velocity}\nTime: {Distance / Velocity}`)
-        
-            if (Distance / Velocity) <= 10 then -- Sorry for the magic number. This just works. No, you don't get a slider for this because it's 2am.
-                Parry()
-            end
+    return false
+end
+
+function DeflectBall()
+    if IsTargeted and DetectBall() then
+        if shared.config.deflect_type == 'Key Press' then
+            keypress(0x46)
+        else
+            ReplicatedStorage.Remotes.ParryButtonPress:Fire()
         end
-        
-        if (tick() - OldTick >= 1/60) then -- Don't want it to update too quickly because my velocity implementation is aids. Yes, I tried Ball.Velocity. No, it didn't work.
-            OldTick = tick()
-            OldPosition = Ball.Position
+    end
+end
+
+UserInputService.InputBegan:Connect(function(Input, IsTyping)
+    if IsTyping then return end
+    if shared.config.mode == 'Toggle' and Input.KeyCode == shared.config.keybind then
+      CanHit = not CanHit
+        if shared.config.notifications then
+            game:GetService("StarterGui"):SetCore("SendNotification",{
+                Title = "Blade Ball",
+                Text = CanHit and 'Enabled!' or 'Disabled!',
+            })
         end
-    end)
+    elseif shared.config.mode == 'Hold' and Input.KeyCode == shared.config.keybind and shared.config.notifications then
+        game:GetService("StarterGui"):SetCore("SendNotification",{
+            Title = "Blade Ball",
+            Text = 'Holding keybind!',
+        })
+    end
 end)
+
+UserInputService.InputEnded:Connect(function(Input, IsTyping)
+    if IsTyping then return end
+    if shared.config.mode == 'Hold' and Input.KeyCode == shared.config.keybind and shared.config.notifications then
+        game:GetService("StarterGui"):SetCore("SendNotification",{
+            Title = "Blade Ball",
+            Text = 'No longer holding keybind!',
+        })
+    end
+end)
+
+game:GetService('RunService').PostSimulation:Connect(function()
+    IsTargeted = IsTarget()
+
+    if shared.config.mode == 'Hold' and UserInputService:IsKeyDown(shared.config.keybind) then
+        DeflectBall()
+    elseif shared.config.mode == 'Toggle' and CanHit then
+        DeflectBall()
+    elseif shared.config.mode == 'Always' then
+        DeflectBall()
+    end
+end)
+
+getgenv().executed = true
+
 else
 game.Players.LocalPlayer:Kick("inbox NGUYEN THANH DAT to buy!!")
 end
