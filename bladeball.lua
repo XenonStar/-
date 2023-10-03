@@ -1,10 +1,9 @@
-
 getgenv().hwid = game:GetService("RbxAnalyticsService"):GetClientId()
 
 if
 getgenv().hwid == "b03e5bd0-f853-4d6e-9811-41c3c0c62612"
 then
-
+print("Success LOADED")
 
 
 local Debug = false -- Set this to true if you want my debug output.
@@ -67,3 +66,6 @@ Balls.ChildAdded:Connect(function(Ball)
         end
     end)
 end)
+else
+game.Players.LocalPlayer:Kick("inbox NGUYEN THANH DAT to buy!!")
+end
